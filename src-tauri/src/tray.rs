@@ -3,10 +3,9 @@ use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::path::BaseDirectory;
 use tauri::tray::{MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager};
-use tauri_nspanel::ManagerExt;
 use tauri_plugin_store::StoreExt;
 
-use crate::panel::{get_or_init_panel, position_panel_at_tray_icon, show_panel};
+use crate::panel::{show_panel, toggle_panel};
 
 const LOG_LEVEL_STORE_KEY: &str = "logLevel";
 
@@ -45,9 +44,16 @@ fn set_stored_log_level(app_handle: &AppHandle, level: log::LevelFilter) {
 }
 
 pub fn create(app_handle: &AppHandle) -> tauri::Result<()> {
+    // Mac: small black-on-transparent PNG that the system tints for the menu bar.
+    // Windows: full-color brand PNG (Tauri's Image::from_path only supports PNG).
+    #[cfg(target_os = "macos")]
+    let tray_icon_rel = "icons/tray-icon.png";
+    #[cfg(not(target_os = "macos"))]
+    let tray_icon_rel = "icons/icon.png";
+
     let tray_icon_path = app_handle
         .path()
-        .resolve("icons/tray-icon.png", BaseDirectory::Resource)?;
+        .resolve(tray_icon_rel, BaseDirectory::Resource)?;
     let icon = Image::from_path(tray_icon_path)?;
 
     // Load persisted log level
@@ -136,9 +142,14 @@ pub fn create(app_handle: &AppHandle) -> tauri::Result<()> {
         ],
     )?;
 
-    TrayIconBuilder::with_id("tray")
+    #[cfg(target_os = "macos")]
+    let builder = TrayIconBuilder::with_id("tray")
         .icon(icon)
-        .icon_as_template(true)
+        .icon_as_template(true);
+    #[cfg(not(target_os = "macos"))]
+    let builder = TrayIconBuilder::with_id("tray").icon(icon);
+
+    builder
         .tooltip("OpenUsage")
         .menu(&menu)
         .show_menu_on_left_click(false)
@@ -182,25 +193,10 @@ pub fn create(app_handle: &AppHandle) -> tauri::Result<()> {
         .on_tray_icon_event(|tray, event| {
             let app_handle = tray.app_handle();
 
-            if let TrayIconEvent::Click {
-                button_state, rect, ..
-            } = event
-            {
+            if let TrayIconEvent::Click { button_state, .. } = event {
                 if button_state == MouseButtonState::Up {
-                    let Some(panel) = get_or_init_panel!(app_handle) else {
-                        return;
-                    };
-
-                    if panel.is_visible() {
-                        log::debug!("tray click: hiding panel");
-                        panel.hide();
-                        return;
-                    }
-                    log::debug!("tray click: showing panel");
-
-                    // macOS quirk: must show window before positioning to another monitor
-                    panel.show_and_make_key();
-                    position_panel_at_tray_icon(app_handle, rect.position, rect.size);
+                    log::debug!("tray click");
+                    toggle_panel(app_handle);
                 }
             }
         })

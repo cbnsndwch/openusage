@@ -19,7 +19,9 @@
         "resizable": false,
         "decorations": false,
         "transparent": true,
-        "visible": false
+        "visible": false,
+        "skipTaskbar": true,
+        "alwaysOnTop": true
       }
     ],
     "security": {
@@ -46,6 +48,14 @@
         }
       }
     },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -55,7 +65,8 @@
     ],
     "resources": [
       "resources/bundled_plugins/**/*",
-      "icons/tray-icon.png"
+      "icons/tray-icon.png",
+      "icons/icon.png"
     ],
     "createUpdaterArtifacts": true
   },

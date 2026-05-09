@@ -6,7 +6,7 @@ See your usage at a glance from your menu bar. No digging through dashboards.
 
 ## Download
 
-[**Download the latest release**](https://github.com/robinebers/openusage/releases/latest) (macOS, Apple Silicon & Intel)
+[**Download the latest release**](https://github.com/robinebers/openusage/releases/latest) (macOS — Apple Silicon & Intel; Windows — x64)
 
 The app auto-updates. Install once and you're set.
 
@@ -99,4 +99,27 @@ Inspired by [CodexBar](https://github.com/steipete/CodexBar) by [@steipete](http
 
 ### Stack
 
-...
+Tauri v2 (Rust + React + TypeScript), Vite, Tailwind v4, Bun.
+
+### Prerequisites
+
+- **Both:** [Rust stable](https://rustup.rs) (1.88+), [Bun](https://bun.sh).
+- **macOS:** Xcode Command Line Tools.
+- **Windows:** "Desktop development with C++" workload from Visual Studio Build Tools (provides MSVC). [WebView2 runtime](https://developer.microsoft.com/microsoft-edge/webview2/) is preinstalled on Windows 11.
+
+### Run locally
+
+```sh
+bun install
+bun run tauri dev
+```
+
+### Build a release locally
+
+```sh
+bun run tauri build
+```
+
+Artifacts land under `src-tauri/target/release/bundle/` (`.dmg`/`.app` on macOS; `.msi` and NSIS `.exe` on Windows).
+
+</details>

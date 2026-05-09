@@ -84,9 +84,11 @@ pub fn init(app_handle: &AppHandle) -> tauri::Result<()> {
         return Ok(());
     };
 
-    // Popover behavior: hide on focus loss, and intercept window-close so that
+    // Popover behavior: hide on focus loss, intercept window-close so that
     // Alt+F4 / system close requests hide the panel instead of quitting the
-    // app (the tray icon is the canonical entry point).
+    // app (the tray icon is the canonical entry point), and re-anchor on
+    // resize so that content growth doesn't push the panel off-screen on the
+    // side of the screen the tray sits on (typically the bottom on Windows).
     let handle = app_handle.clone();
     window.on_window_event(move |event| match event {
         WindowEvent::Focused(false) => {
@@ -99,6 +101,9 @@ pub fn init(app_handle: &AppHandle) -> tauri::Result<()> {
             if let Some(window) = handle.get_webview_window("main") {
                 let _ = window.hide();
             }
+        }
+        WindowEvent::Resized(_) => {
+            position_panel_from_tray(&handle);
         }
         _ => {}
     });

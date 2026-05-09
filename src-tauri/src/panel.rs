@@ -116,6 +116,20 @@ pub fn show_panel(app_handle: &AppHandle) {
     }
 }
 
+/// Hide the panel if it exists. No-op if not initialized.
+pub fn hide_panel(app_handle: &AppHandle) {
+    if let Ok(panel) = app_handle.get_webview_panel("main") {
+        panel.hide();
+    }
+}
+
+pub fn is_visible(app_handle: &AppHandle) -> bool {
+    app_handle
+        .get_webview_panel("main")
+        .map(|panel| panel.is_visible())
+        .unwrap_or(false)
+}
+
 /// Toggle panel visibility. If visible, hide it. If hidden, show it.
 /// Used by global shortcut handler.
 pub fn toggle_panel(app_handle: &AppHandle) {

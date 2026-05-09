@@ -19,7 +19,9 @@
         "resizable": false,
         "decorations": false,
         "transparent": true,
-        "visible": false
+        "visible": false,
+        "skipTaskbar": true,
+        "alwaysOnTop": true
       }
     ],
     "security": {

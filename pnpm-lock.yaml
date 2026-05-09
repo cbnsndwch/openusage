@@ -12,7 +12,7 @@ importers:
         specifier: ^0.4.1
         version: 0.4.1
       '@base-ui/react':
-        specifier: ^1.1.0
+        specifier: ^1.4.1
         version: 1.4.1(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@dnd-kit/core':
         specifier: ^6.3.1
@@ -60,10 +60,10 @@ importers:
         specifier: ^1.7.0
         version: 1.14.0(react@19.2.6)
       react:
-        specifier: ^19.1.0
+        specifier: ^19.2.6
         version: 19.2.6
       react-dom:
-        specifier: ^19.1.0
+        specifier: ^19.2.6
         version: 19.2.6(react@19.2.6)
       tailwind-merge:
         specifier: ^3.5.0
@@ -72,17 +72,17 @@ importers:
         specifier: ^4.3.0
         version: 4.3.0
       zustand:
-        specifier: ^5.0.11
+        specifier: ^5.0.13
         version: 5.0.13(@types/react@19.2.14)(react@19.2.6)(use-sync-external-store@1.6.0(react@19.2.6))
     devDependencies:
       '@tauri-apps/cli':
         specifier: ^2.11.1
         version: 2.11.1
       '@testing-library/dom':
-        specifier: ^10.4.0
+        specifier: ^10.4.1
         version: 10.4.1
       '@testing-library/jest-dom':
-        specifier: ^6.8.0
+        specifier: ^6.9.1
         version: 6.9.1
       '@testing-library/react':
         specifier: ^16.3.2
@@ -94,19 +94,19 @@ importers:
         specifier: ^25.1.0
         version: 25.6.2
       '@types/react':
-        specifier: ^19.1.8
+        specifier: ^19.2.14
         version: 19.2.14
       '@types/react-dom':
-        specifier: ^19.1.6
+        specifier: ^19.2.3
         version: 19.2.3(@types/react@19.2.14)
       '@vitejs/plugin-react':
         specifier: ^6.0.1
         version: 6.0.1(vite@8.0.11(@types/node@25.6.2)(jiti@2.7.0))
       '@vitest/coverage-v8':
-        specifier: ^4.0.18
+        specifier: ^4.1.5
         version: 4.1.5(vitest@4.1.5)
       jsdom:
-        specifier: ^29.0.1
+        specifier: ^29.1.1
         version: 29.1.1
       npm-check-updates:
         specifier: ^22.1.1
@@ -118,10 +118,10 @@ importers:
         specifier: ~6.0.2
         version: 6.0.3
       vite:
-        specifier: ^8.0.0
+        specifier: ^8.0.11
         version: 8.0.11(@types/node@25.6.2)(jiti@2.7.0)
       vitest:
-        specifier: ^4.0.18
+        specifier: ^4.1.5
         version: 4.1.5(@types/node@25.6.2)(@vitest/coverage-v8@4.1.5)(jsdom@29.1.1)(vite@8.0.11(@types/node@25.6.2)(jiti@2.7.0))
 
 packages:
@@ -1062,8 +1062,8 @@ packages:
   scheduler@0.27.0:
     resolution: {integrity: sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q==}
 
-  semver@7.8.0:
-    resolution: {integrity: sha512-AcM7dV/5ul4EekoQ29Agm5vri8JNqRyj39o0qpX6vDF2GZrtutZl5RwgD1XnZjiTAfncsJhMI48QQH3sN87YNA==}
+  semver@7.7.4:
+    resolution: {integrity: sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -2008,7 +2008,7 @@ snapshots:
 
   make-dir@4.0.0:
     dependencies:
-      semver: 7.8.0
+      semver: 7.7.4
 
   mdn-data@2.27.1: {}
 
@@ -2089,7 +2089,7 @@ snapshots:
 
   scheduler@0.27.0: {}
 
-  semver@7.8.0: {}
+  semver@7.7.4: {}
 
   siginfo@2.0.0: {}
 

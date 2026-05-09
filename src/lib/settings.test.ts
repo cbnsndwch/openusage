@@ -102,6 +102,19 @@ describe("settings", () => {
     expect(result.disabled).toEqual(["copilot", "windsurf"])
   })
 
+  it("inherits default-enabled status for profile-instance ids (e.g. claude:work)", () => {
+    const plugins: PluginMeta[] = [
+      { id: "claude", name: "Claude", iconUrl: "", lines: [], primaryCandidates: [] },
+      { id: "claude:work", name: "Claude · work", iconUrl: "", lines: [], primaryCandidates: [] },
+      { id: "claude:personal", name: "Claude · personal", iconUrl: "", lines: [], primaryCandidates: [] },
+      { id: "copilot:acme", name: "Copilot · acme", iconUrl: "", lines: [], primaryCandidates: [] },
+    ]
+    const result = normalizePluginSettings({ order: [], disabled: [] }, plugins)
+    expect(result.order).toEqual(["claude", "claude:work", "claude:personal", "copilot:acme"])
+    // Claude family enabled (claude is in DEFAULT_ENABLED_PLUGINS); copilot:acme not.
+    expect(result.disabled).toEqual(["copilot:acme"])
+  })
+
   it("compares settings equality", () => {
     const a = { order: ["a"], disabled: [] }
     const b = { order: ["a"], disabled: [] }

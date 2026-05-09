@@ -80,10 +80,25 @@ const store = new LazyStore(SETTINGS_STORE_PATH);
 
 const DEFAULT_ENABLED_PLUGINS = new Set(["claude", "codex", "cursor"]);
 
+const PLUGIN_PROFILES_MIGRATION_KEY = "migrations.pluginProfilesAutoEnabled";
+
 export const DEFAULT_PLUGIN_SETTINGS: PluginSettings = {
   order: [],
   disabled: [],
 };
+
+/**
+ * Strip a profile-instance suffix from a provider id.
+ * `claude:work` → `claude`; `claude` → `claude`.
+ */
+function basePluginId(id: string): string {
+  const idx = id.indexOf(":");
+  return idx > 0 ? id.slice(0, idx) : id;
+}
+
+function isDefaultEnabled(id: string): boolean {
+  return DEFAULT_ENABLED_PLUGINS.has(basePluginId(id));
+}
 
 export async function loadPluginSettings(): Promise<PluginSettings> {
   const stored = await store.get<PluginSettings>(PLUGIN_SETTINGS_KEY);
@@ -144,7 +159,7 @@ export function normalizePluginSettings(
 
   const disabled = settings.disabled.filter((id) => knownSet.has(id));
   for (const id of newlyAdded) {
-    if (!DEFAULT_ENABLED_PLUGINS.has(id) && !disabled.includes(id)) {
+    if (!isDefaultEnabled(id) && !disabled.includes(id)) {
       disabled.push(id);
     }
   }

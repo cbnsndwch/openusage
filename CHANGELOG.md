@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.7.0
+
+### Features
+- feat: Windows support — tray panel, NSIS/MSI bundling, WebView2 backend
+- feat(claude): multi-profile discovery and per-instance settings migration
+
+### CI
+- ci: drop macOS publish matrix, go Windows-only
+
+---
+
+**Full Changelog**: [v0.6.23...v0.7.0](https://github.com/cbnsndwch/openusage/compare/v0.6.23...v0.7.0)
+
 ## v0.6.23
 
 ### Bug Fixes

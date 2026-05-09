@@ -44,9 +44,16 @@ fn set_stored_log_level(app_handle: &AppHandle, level: log::LevelFilter) {
 }
 
 pub fn create(app_handle: &AppHandle) -> tauri::Result<()> {
+    // Mac: small black-on-transparent PNG that the system tints for the menu bar.
+    // Windows: full-color brand PNG (Tauri's Image::from_path only supports PNG).
+    #[cfg(target_os = "macos")]
+    let tray_icon_rel = "icons/tray-icon.png";
+    #[cfg(not(target_os = "macos"))]
+    let tray_icon_rel = "icons/icon.png";
+
     let tray_icon_path = app_handle
         .path()
-        .resolve("icons/tray-icon.png", BaseDirectory::Resource)?;
+        .resolve(tray_icon_rel, BaseDirectory::Resource)?;
     let icon = Image::from_path(tray_icon_path)?;
 
     // Load persisted log level
@@ -135,9 +142,14 @@ pub fn create(app_handle: &AppHandle) -> tauri::Result<()> {
         ],
     )?;
 
-    TrayIconBuilder::with_id("tray")
+    #[cfg(target_os = "macos")]
+    let builder = TrayIconBuilder::with_id("tray")
         .icon(icon)
-        .icon_as_template(true)
+        .icon_as_template(true);
+    #[cfg(not(target_os = "macos"))]
+    let builder = TrayIconBuilder::with_id("tray").icon(icon);
+
+    builder
         .tooltip("OpenUsage")
         .menu(&menu)
         .show_menu_on_left_click(false)

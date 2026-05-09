@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.7.1
+
+### Chores
+- ci: update Tauri updater signing config and endpoints for fork
+
+---
+
+**Full Changelog**: [v0.7.0...v0.7.1](https://github.com/cbnsndwch/openusage/compare/v0.7.0...v0.7.1)
+
 ## v0.7.0
 
 ### Features

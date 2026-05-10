@@ -7,7 +7,7 @@ const API_URL = "https://ampcode.com/api/internal"
 
 const loadPlugin = async () => {
   await import("./plugin.js")
-  return globalThis.__openusage_plugin
+  return globalThis.__pacebar_plugin
 }
 
 function writeSecrets(ctx, apiKey) {
@@ -43,7 +43,7 @@ function standardDisplayText(opts) {
 
 describe("amp plugin", () => {
   beforeEach(() => {
-    delete globalThis.__openusage_plugin
+    delete globalThis.__pacebar_plugin
     vi.resetModules()
   })
 

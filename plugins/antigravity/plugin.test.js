@@ -3,7 +3,7 @@ import { makeCtx } from "../test-helpers.js"
 
 const loadPlugin = async () => {
   await import("./plugin.js")
-  return globalThis.__openusage_plugin
+  return globalThis.__pacebar_plugin
 }
 
 const OAUTH_TOKEN_KEY = "antigravityUnifiedStateSync.oauthToken"
@@ -153,7 +153,7 @@ function makeOAuthSentinelB64(ctx, opts) {
 
 describe("antigravity plugin", () => {
   beforeEach(() => {
-    delete globalThis.__openusage_plugin
+    delete globalThis.__pacebar_plugin
     vi.resetModules()
   })
 

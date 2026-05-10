@@ -16,6 +16,7 @@ tmpcov-gem
 
 # Editor directories and files
 .vscode/
+.local/
 .conductor/
 .claude/settings.local.json
 .idea

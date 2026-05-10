@@ -111,9 +111,9 @@ pub fn run_probe(
         }
 
         let globals = ctx.globals();
-        let plugin_obj: Object = match globals.get("__openusage_plugin") {
+        let plugin_obj: Object = match globals.get("__pacebar_plugin") {
             Ok(obj) => obj,
-            Err(_) => return mk_error("missing __openusage_plugin".to_string()),
+            Err(_) => return mk_error("missing __pacebar_plugin".to_string()),
         };
 
         let probe_fn: rquickjs::Function = match plugin_obj.get("probe") {
@@ -122,7 +122,7 @@ pub fn run_probe(
         };
 
         let probe_ctx: Value = globals
-            .get("__openusage_ctx")
+            .get("__pacebar_ctx")
             .unwrap_or_else(|_| Value::new_undefined(ctx.clone()));
 
         let result_value: Value = match probe_fn.call((probe_ctx,)) {
@@ -512,7 +512,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_nanos();
-        std::env::temp_dir().join(format!("openusage-test-{}-{}", label, nanos))
+        std::env::temp_dir().join(format!("pacebar-test-{}-{}", label, nanos))
     }
 
     fn error_text(output: PluginOutput) -> String {
@@ -526,7 +526,7 @@ mod tests {
     fn run_probe_returns_thrown_string_from_sync_error() {
         let plugin = test_plugin(
             r#"
-            globalThis.__openusage_plugin = {
+            globalThis.__pacebar_plugin = {
                 probe() {
                     throw "boom";
                 }
@@ -541,7 +541,7 @@ mod tests {
     fn run_probe_returns_thrown_string_from_async_error() {
         let plugin = test_plugin(
             r#"
-            globalThis.__openusage_plugin = {
+            globalThis.__pacebar_plugin = {
                 probe: async function () {
                     throw "boom";
                 }

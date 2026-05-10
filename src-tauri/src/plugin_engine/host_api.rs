@@ -102,7 +102,7 @@ fn current_macos_keychain_account_from_user_env(user_env: Option<String>) -> Str
             }
         })
         .or_else(|| read_env_value_via_command("id", &["-un"]))
-        .unwrap_or_else(|| "openusage-user".to_string())
+        .unwrap_or_else(|| "pacebar-user".to_string())
 }
 
 fn current_macos_keychain_account() -> String {
@@ -178,8 +178,8 @@ fn shell_from_env() -> Option<String> {
 }
 
 fn read_env_from_interactive_shell(program: &str, name: &str) -> Option<String> {
-    const START_MARKER: &str = "__OPENUSAGE_ENV_START__";
-    const END_MARKER: &str = "__OPENUSAGE_ENV_END__";
+    const START_MARKER: &str = "__PACEBAR_ENV_START__";
+    const END_MARKER: &str = "__PACEBAR_ENV_END__";
 
     let script = format!(
         "printf '{}\\n'; printenv {}; printf '{}\\n'",
@@ -553,7 +553,7 @@ pub fn inject_host_api<'js>(
     inject_ccusage(ctx, &host, plugin_id)?;
 
     probe_ctx.set("host", host)?;
-    globals.set("__openusage_ctx", probe_ctx)?;
+    globals.set("__pacebar_ctx", probe_ctx)?;
 
     Ok(())
 }
@@ -859,8 +859,8 @@ fn inject_http<'js>(ctx: &Ctx<'js>, host: &Object<'js>, plugin_id: &str) -> rqui
     ctx.eval::<(), _>(
         r#"
         (function() {
-            // Will be patched after __openusage_ctx is set.
-            if (typeof __openusage_ctx !== "undefined") {
+            // Will be patched after __pacebar_ctx is set.
+            if (typeof __pacebar_ctx !== "undefined") {
                 void 0;
             }
         })();
@@ -877,8 +877,8 @@ pub fn patch_http_wrapper(ctx: &rquickjs::Ctx<'_>) -> rquickjs::Result<()> {
     ctx.eval::<(), _>(
         r#"
         (function() {
-            var rawFn = __openusage_ctx.host.http._requestRaw;
-            __openusage_ctx.host.http.request = function(req) {
+            var rawFn = __pacebar_ctx.host.http._requestRaw;
+            __pacebar_ctx.host.http.request = function(req) {
                 var json = JSON.stringify({
                     url: req.url,
                     method: req.method || "GET",
@@ -896,12 +896,12 @@ pub fn patch_http_wrapper(ctx: &rquickjs::Ctx<'_>) -> rquickjs::Result<()> {
     )
 }
 
-/// Inject utility APIs (line builders, formatters, base64, jwt) onto __openusage_ctx
+/// Inject utility APIs (line builders, formatters, base64, jwt) onto __pacebar_ctx
 pub fn inject_utils(ctx: &rquickjs::Ctx<'_>) -> rquickjs::Result<()> {
     ctx.eval::<(), _>(
         r#"
         (function() {
-            var ctx = __openusage_ctx;
+            var ctx = __pacebar_ctx;
 
             // Line builders (options object API)
             ctx.line = {
@@ -1424,8 +1424,8 @@ pub fn patch_ls_wrapper(ctx: &rquickjs::Ctx<'_>) -> rquickjs::Result<()> {
     ctx.eval::<(), _>(
         r#"
         (function() {
-            var rawFn = __openusage_ctx.host.ls._discoverRaw;
-            __openusage_ctx.host.ls.discover = function(opts) {
+            var rawFn = __pacebar_ctx.host.ls._discoverRaw;
+            __pacebar_ctx.host.ls.discover = function(opts) {
                 var optsJson;
                 try { optsJson = JSON.stringify(opts); } catch (e) { return null; }
                 var json = rawFn(optsJson);
@@ -2184,8 +2184,8 @@ pub fn patch_ccusage_wrapper(ctx: &rquickjs::Ctx<'_>) -> rquickjs::Result<()> {
     ctx.eval::<(), _>(
         r#"
         (function() {
-            var rawFn = __openusage_ctx.host.ccusage._queryRaw;
-            __openusage_ctx.host.ccusage.query = function(opts) {
+            var rawFn = __pacebar_ctx.host.ccusage._queryRaw;
+            __pacebar_ctx.host.ccusage.query = function(opts) {
                 var result = rawFn(JSON.stringify(opts || {}));
                 try {
                     var parsed = JSON.parse(result);
@@ -2688,44 +2688,44 @@ mod tests {
         let stdout = concat!(
             "startup banner\n",
             "\u{1b}[31mplugin failed\u{1b}[0m\n",
-            "__OPENUSAGE_ENV_START__\n",
+            "__PACEBAR_ENV_START__\n",
             "  sk-test-key-12345  \n",
-            "__OPENUSAGE_ENV_END__\n",
+            "__PACEBAR_ENV_END__\n",
             "\u{1b}[32muser@host\u{1b}[0m\n"
         );
         let value =
-            extract_marked_value(stdout, "__OPENUSAGE_ENV_START__", "__OPENUSAGE_ENV_END__");
+            extract_marked_value(stdout, "__PACEBAR_ENV_START__", "__PACEBAR_ENV_END__");
         assert_eq!(value.as_deref(), Some("sk-test-key-12345"));
     }
 
     #[test]
     fn extract_marked_value_strips_inline_terminal_sequences_from_marked_value() {
         let stdout = concat!(
-            "__OPENUSAGE_ENV_START__\n",
+            "__PACEBAR_ENV_START__\n",
             "\u{1b}[?1000l\n",
             "  sk-test-key-12345\u{1b}[?2004h\r\n",
-            "__OPENUSAGE_ENV_END__\n"
+            "__PACEBAR_ENV_END__\n"
         );
         let value =
-            extract_marked_value(stdout, "__OPENUSAGE_ENV_START__", "__OPENUSAGE_ENV_END__");
+            extract_marked_value(stdout, "__PACEBAR_ENV_START__", "__PACEBAR_ENV_END__");
         assert_eq!(value.as_deref(), Some("sk-test-key-12345"));
     }
 
     #[test]
     fn extract_marked_value_returns_none_when_marked_value_is_empty() {
-        let stdout = "__OPENUSAGE_ENV_START__\n  \n__OPENUSAGE_ENV_END__\n";
+        let stdout = "__PACEBAR_ENV_START__\n  \n__PACEBAR_ENV_END__\n";
         let value =
-            extract_marked_value(stdout, "__OPENUSAGE_ENV_START__", "__OPENUSAGE_ENV_END__");
+            extract_marked_value(stdout, "__PACEBAR_ENV_START__", "__PACEBAR_ENV_END__");
         assert!(value.is_none());
     }
 
     #[test]
     fn parse_interactive_shell_env_output_does_not_fallback_to_end_marker_for_empty_value() {
-        let stdout = "__OPENUSAGE_ENV_START__\n  \n__OPENUSAGE_ENV_END__\n";
+        let stdout = "__PACEBAR_ENV_START__\n  \n__PACEBAR_ENV_END__\n";
         let value = parse_interactive_shell_env_output(
             stdout,
-            "__OPENUSAGE_ENV_START__",
-            "__OPENUSAGE_ENV_END__",
+            "__PACEBAR_ENV_START__",
+            "__PACEBAR_ENV_END__",
         );
         assert!(value.is_none());
     }
@@ -2735,8 +2735,8 @@ mod tests {
         let stdout = "\u{1b}[?1000l\n  sk-test-key-12345\u{1b}[?2004h\r\n";
         let value = parse_interactive_shell_env_output(
             stdout,
-            "__OPENUSAGE_ENV_START__",
-            "__OPENUSAGE_ENV_END__",
+            "__PACEBAR_ENV_START__",
+            "__PACEBAR_ENV_END__",
         );
         assert_eq!(value.as_deref(), Some("sk-test-key-12345"));
     }
@@ -2749,7 +2749,7 @@ mod tests {
             let app_data = std::env::temp_dir();
             inject_host_api(&ctx, "test", &app_data, "0.0.0", &HashMap::new()).expect("inject host api");
             let globals = ctx.globals();
-            let probe_ctx: Object = globals.get("__openusage_ctx").expect("probe ctx");
+            let probe_ctx: Object = globals.get("__pacebar_ctx").expect("probe ctx");
             let host: Object = probe_ctx.get("host").expect("host");
             let crypto: Object = host.get("crypto").expect("crypto");
             let _decrypt: Function = crypto.get("decryptAes256Gcm").expect("decryptAes256Gcm");
@@ -2766,7 +2766,7 @@ mod tests {
             let app_data = std::env::temp_dir();
             inject_host_api(&ctx, "test", &app_data, "0.0.0", &HashMap::new()).expect("inject host api");
             let js_expr = format!(
-                r#"__openusage_ctx.host.crypto.decryptAes256Gcm("{}", "{}")"#,
+                r#"__pacebar_ctx.host.crypto.decryptAes256Gcm("{}", "{}")"#,
                 envelope, key_b64
             );
             let decrypted: String = ctx.eval(js_expr).expect("js decrypt");
@@ -2783,7 +2783,7 @@ mod tests {
             inject_host_api(&ctx, "test", &app_data, "0.0.0", &HashMap::new()).expect("inject host api");
             // Vector: `printf '%s' 'hello' | shasum -a 256`
             let result: String = ctx
-                .eval(r#"__openusage_ctx.host.crypto.sha256Hex("hello")"#)
+                .eval(r#"__pacebar_ctx.host.crypto.sha256Hex("hello")"#)
                 .expect("js sha256");
             assert_eq!(
                 result,
@@ -2791,7 +2791,7 @@ mod tests {
             );
 
             let empty: String = ctx
-                .eval(r#"__openusage_ctx.host.crypto.sha256Hex("")"#)
+                .eval(r#"__pacebar_ctx.host.crypto.sha256Hex("")"#)
                 .expect("js sha256 empty");
             assert_eq!(
                 empty,
@@ -2808,7 +2808,7 @@ mod tests {
             let app_data = std::env::temp_dir();
             inject_host_api(&ctx, "test", &app_data, "0.0.0", &HashMap::new()).expect("inject host api");
             let globals = ctx.globals();
-            let probe_ctx: Object = globals.get("__openusage_ctx").expect("probe ctx");
+            let probe_ctx: Object = globals.get("__pacebar_ctx").expect("probe ctx");
             let host: Object = probe_ctx.get("host").expect("host");
             let keychain: Object = host.get("keychain").expect("keychain");
             let _read: Function = keychain
@@ -2852,7 +2852,7 @@ mod tests {
             let app_data = std::env::temp_dir();
             inject_host_api(&ctx, "test", &app_data, "0.0.0", &HashMap::new()).expect("inject host api");
             let globals = ctx.globals();
-            let probe_ctx: Object = globals.get("__openusage_ctx").expect("probe ctx");
+            let probe_ctx: Object = globals.get("__pacebar_ctx").expect("probe ctx");
             let host: Object = probe_ctx.get("host").expect("host");
             let env: Object = host.get("env").expect("env");
             let get: Function = env.get("get").expect("get");
@@ -2863,7 +2863,7 @@ mod tests {
                     get.call((name.to_string(),)).expect("get whitelisted var");
                 assert_eq!(value, expected, "{name} should match host env resolver");
 
-                let js_expr = format!(r#"__openusage_ctx.host.env.get("{}")"#, name);
+                let js_expr = format!(r#"__pacebar_ctx.host.env.get("{}")"#, name);
                 let js_value: Option<String> = ctx.eval(js_expr).expect("js get whitelisted var");
                 assert_eq!(
                     js_value, expected,
@@ -2872,7 +2872,7 @@ mod tests {
             }
 
             let blocked: Option<String> = get
-                .call(("__OPENUSAGE_TEST_NOT_WHITELISTED__".to_string(),))
+                .call(("__PACEBAR_TEST_NOT_WHITELISTED__".to_string(),))
                 .expect("get blocked var");
             assert!(
                 blocked.is_none(),
@@ -2880,7 +2880,7 @@ mod tests {
             );
 
             let js_blocked: Option<String> = ctx
-                .eval(r#"__openusage_ctx.host.env.get("__OPENUSAGE_TEST_NOT_WHITELISTED__")"#)
+                .eval(r#"__pacebar_ctx.host.env.get("__PACEBAR_TEST_NOT_WHITELISTED__")"#)
                 .expect("js get blocked var");
             assert!(
                 js_blocked.is_none(),
@@ -2920,7 +2920,7 @@ mod tests {
             let app_data = std::env::temp_dir();
             inject_host_api(&ctx, "test", &app_data, "0.0.0", &HashMap::new()).expect("inject host api");
             let globals = ctx.globals();
-            let probe_ctx: Object = globals.get("__openusage_ctx").expect("probe ctx");
+            let probe_ctx: Object = globals.get("__pacebar_ctx").expect("probe ctx");
             let host: Object = probe_ctx.get("host").expect("host");
             let env: Object = host.get("env").expect("env");
             let get: Function = env.get("get").expect("get");
@@ -2933,7 +2933,7 @@ mod tests {
             );
 
             let js_value: Option<String> = ctx
-                .eval(r#"__openusage_ctx.host.env.get("ZAI_API_KEY")"#)
+                .eval(r#"__pacebar_ctx.host.env.get("ZAI_API_KEY")"#)
                 .expect("js get");
             assert_eq!(
                 js_value.as_deref(),
@@ -2946,8 +2946,8 @@ mod tests {
     #[test]
     fn current_macos_keychain_account_prefers_explicit_user_value() {
         assert_eq!(
-            current_macos_keychain_account_from_user_env(Some("openusage-test-user".to_string())),
-            "openusage-test-user"
+            current_macos_keychain_account_from_user_env(Some("pacebar-test-user".to_string())),
+            "pacebar-test-user"
         );
     }
 
@@ -2982,7 +2982,7 @@ mod tests {
     fn keychain_find_generic_password_args_for_account_include_account_and_service() {
         let args = keychain_find_generic_password_args_for_account(
             "Claude Code-credentials",
-            "openusage-test-user",
+            "pacebar-test-user",
         );
         let rendered: Vec<String> = args
             .into_iter()
@@ -2994,7 +2994,7 @@ mod tests {
             vec![
                 "find-generic-password",
                 "-a",
-                "openusage-test-user",
+                "pacebar-test-user",
                 "-s",
                 "Claude Code-credentials",
                 "-w",
@@ -3027,7 +3027,7 @@ mod tests {
     fn keychain_add_generic_password_args_for_account_include_update_account_service_and_value() {
         let args = keychain_add_generic_password_args_for_account(
             "Claude Code-credentials",
-            "openusage-test-user",
+            "pacebar-test-user",
             "secret-value",
         );
         let rendered: Vec<String> = args
@@ -3041,7 +3041,7 @@ mod tests {
                 "add-generic-password",
                 "-U",
                 "-a",
-                "openusage-test-user",
+                "pacebar-test-user",
                 "-s",
                 "Claude Code-credentials",
                 "-w",
@@ -3134,7 +3134,7 @@ mod tests {
 
     #[test]
     fn redact_body_redacts_user_id_and_email() {
-        let body = r#"{"user_id": "user-iupzZ7KFykMLrnzpkHSq7wjo", "email": "rob@sunstory.com"}"#;
+        let body = r#"{"user_id": "user-iupzZ7KFykMLrnzpkHSq7wjo", "email": "test@example.com"}"#;
         let redacted = redact_body(body);
         assert!(
             !redacted.contains("user-iupzZ7KFykMLrnzpkHSq7wjo"),
@@ -3142,7 +3142,7 @@ mod tests {
             redacted
         );
         assert!(
-            !redacted.contains("rob@sunstory.com"),
+            !redacted.contains("test@example.com"),
             "email should be redacted, got: {}",
             redacted
         );
@@ -3280,10 +3280,10 @@ mod tests {
     #[test]
     fn redact_body_redacts_login_and_analytics_tracking_id() {
         let body =
-            r#"{"login":"robinebers","analytics_tracking_id":"c9df3f012bb8c2eb7aae6868ee8da6cf"}"#;
+            r#"{"login":"testuser-login","analytics_tracking_id":"c9df3f012bb8c2eb7aae6868ee8da6cf"}"#;
         let redacted = redact_body(body);
         assert!(
-            !redacted.contains("robinebers"),
+            !redacted.contains("testuser-login"),
             "login should be redacted, got: {}",
             redacted
         );
@@ -3308,19 +3308,19 @@ mod tests {
     #[test]
     fn redact_body_redacts_name_field() {
         let body =
-            r#"{"userStatus":{"name":"Robin Ebers","email":"rob@sunstory.com","planStatus":{}}}"#;
+            r#"{"userStatus":{"name":"Test User","email":"test@example.com","planStatus":{}}}"#;
         let redacted = redact_body(body);
         assert!(
-            !redacted.contains("Robin Ebers"),
+            !redacted.contains("Test User"),
             "name should be redacted, got: {}",
             redacted
         );
         assert!(
-            !redacted.contains("rob@sunstory.com"),
+            !redacted.contains("test@example.com"),
             "email should be redacted, got: {}",
             redacted
         );
-        // "Robin Ebers" is 11 chars (<=12) so becomes [REDACTED]
+        // "Test User" is 11 chars (<=12) so becomes [REDACTED]
         assert!(
             redacted.contains("\"name\": \"[REDACTED]\""),
             "name should show [REDACTED], got: {}",
@@ -3499,7 +3499,7 @@ mod tests {
 
     #[test]
     fn ccusage_path_entries_with_home_and_existing_path_preserves_order() {
-        let home = std::path::PathBuf::from("/tmp/openusage-home");
+        let home = std::path::PathBuf::from("/tmp/pacebar-home");
         let existing = std::env::join_paths([
             std::path::PathBuf::from("/usr/bin"),
             std::path::PathBuf::from("/bin"),
@@ -3558,7 +3558,7 @@ mod tests {
 
     #[test]
     fn ccusage_enriched_path_with_preserves_entries_after_join_and_split() {
-        let home = std::path::PathBuf::from("/tmp/openusage-home");
+        let home = std::path::PathBuf::from("/tmp/pacebar-home");
         let existing = std::env::join_paths([
             std::path::PathBuf::from("/usr/bin"),
             std::path::PathBuf::from("/bin"),
@@ -3813,7 +3813,7 @@ Saved lockfile
         }
 
         let test_id = format!(
-            "openusage-ccusage-timeout-{}",
+            "pacebar-ccusage-timeout-{}",
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .expect("system time")

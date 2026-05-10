@@ -158,7 +158,7 @@ mod tests {
     use std::fs;
 
     fn make_temp_dir(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("openusage_test_{}", name));
+        let dir = std::env::temp_dir().join(format!("pacebar_test_{}", name));
         fs::create_dir_all(&dir).expect("create temp dir");
         dir
     }

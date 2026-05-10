@@ -127,7 +127,7 @@ pub fn create(app_handle: &AppHandle) -> tauri::Result<()> {
     ];
 
     let separator = PredefinedMenuItem::separator(app_handle)?;
-    let about = MenuItem::with_id(app_handle, "about", "About OpenUsage", true, None::<&str>)?;
+    let about = MenuItem::with_id(app_handle, "about", "About PaceBar", true, None::<&str>)?;
     let quit = MenuItem::with_id(app_handle, "quit", "Quit", true, None::<&str>)?;
 
     let menu = Menu::with_items(
@@ -150,7 +150,7 @@ pub fn create(app_handle: &AppHandle) -> tauri::Result<()> {
     let builder = TrayIconBuilder::with_id("tray").icon(icon);
 
     builder
-        .tooltip("OpenUsage")
+        .tooltip("PaceBar")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(move |app_handle, event| {

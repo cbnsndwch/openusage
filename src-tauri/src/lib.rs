@@ -154,6 +154,11 @@ pub struct PluginMeta {
     /// Ordered list of primary metric candidates (sorted by primaryOrder).
     /// Frontend picks the first one that exists in runtime data.
     pub primary_candidates: Vec<String>,
+    /// Optional base64 data URL of a user-supplied avatar image for this profile instance.
+    pub avatar_url: Option<String>,
+    /// True when this instance has a writable profile directory (e.g. claude-profiles).
+    /// The frontend shows the avatar picker only when this is true.
+    pub supports_avatar: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -510,10 +515,115 @@ fn list_plugins(state: tauri::State<'_, Mutex<AppState>>) -> Vec<PluginMeta> {
                     lines: lines.clone(),
                     links: links.clone(),
                     primary_candidates: primary_candidates.clone(),
+                    avatar_url: inst.avatar_data_url.clone(),
+                    supports_avatar: inst.env_overrides.contains_key("CLAUDE_CONFIG_DIR"),
                 })
                 .collect::<Vec<_>>()
         })
         .collect()
+}
+
+/// Return the profile directory for a given plugin_id, or None if the instance
+/// has no CLAUDE_CONFIG_DIR override (i.e. it is the anonymous default instance).
+fn find_profile_dir(
+    plugins: &[plugin_engine::manifest::LoadedPlugin],
+    plugin_id: &str,
+) -> Option<std::path::PathBuf> {
+    for plugin in plugins {
+        for inst in &plugin.instances {
+            let id = plugin_engine::profile_discovery::full_provider_id(
+                &plugin.manifest.id,
+                &inst.id_suffix,
+            );
+            if id == plugin_id {
+                return inst
+                    .env_overrides
+                    .get("CLAUDE_CONFIG_DIR")
+                    .map(|dir| std::path::PathBuf::from(dir));
+            }
+        }
+    }
+    None
+}
+
+/// Update avatar_data_url in-place for the instance matching plugin_id so that
+/// a subsequent list_plugins call reflects the change without re-reading disk.
+fn update_avatar_in_state(
+    plugins: &mut Vec<plugin_engine::manifest::LoadedPlugin>,
+    plugin_id: &str,
+    avatar: Option<String>,
+) {
+    for plugin in plugins.iter_mut() {
+        for inst in plugin.instances.iter_mut() {
+            let id = plugin_engine::profile_discovery::full_provider_id(
+                &plugin.manifest.id,
+                &inst.id_suffix,
+            );
+            if id == plugin_id {
+                inst.avatar_data_url = avatar;
+                return;
+            }
+        }
+    }
+}
+
+/// Write a new avatar image for a profile instance.
+///
+/// `bytes` is the raw image data; `mime_type` must be "image/png" or "image/jpeg".
+/// Any existing avatar file (regardless of extension) is removed first so there
+/// is never more than one avatar file per profile directory.
+#[tauri::command]
+fn set_profile_avatar(
+    state: tauri::State<'_, Mutex<AppState>>,
+    plugin_id: String,
+    bytes: Vec<u8>,
+    mime_type: String,
+) -> Result<(), String> {
+    let ext = match mime_type.as_str() {
+        "image/png" => "png",
+        "image/jpeg" | "image/jpg" => "jpg",
+        other => return Err(format!("unsupported image type: {}", other)),
+    };
+
+    let mut locked = state.lock().map_err(|e| e.to_string())?;
+
+    let profile_dir = find_profile_dir(&locked.plugins, &plugin_id)
+        .ok_or_else(|| format!("no profile directory for '{}'", plugin_id))?;
+
+    for fname in &["avatar.png", "avatar.jpg", "avatar.jpeg"] {
+        let _ = std::fs::remove_file(profile_dir.join(fname));
+    }
+
+    std::fs::write(profile_dir.join(format!("avatar.{}", ext)), &bytes)
+        .map_err(|e| format!("failed to write avatar: {}", e))?;
+
+    use base64::{Engine, engine::general_purpose::STANDARD};
+    let data_url = format!("data:{};base64,{}", mime_type, STANDARD.encode(&bytes));
+    update_avatar_in_state(&mut locked.plugins, &plugin_id, Some(data_url));
+
+    log::info!("avatar set for '{}'", plugin_id);
+    Ok(())
+}
+
+/// Remove the avatar image for a profile instance.
+#[tauri::command]
+fn remove_profile_avatar(
+    state: tauri::State<'_, Mutex<AppState>>,
+    plugin_id: String,
+) -> Result<(), String> {
+    let mut locked = state.lock().map_err(|e| e.to_string())?;
+
+    let profile_dir = find_profile_dir(&locked.plugins, &plugin_id)
+        .ok_or_else(|| format!("no profile directory for '{}'", plugin_id))?;
+
+    for fname in &["avatar.png", "avatar.jpg", "avatar.jpeg"] {
+        let _ = std::fs::remove_file(profile_dir.join(fname));
+    }
+
+    update_avatar_in_state(&mut locked.plugins, &plugin_id, None);
+
+    log::info!("avatar removed for '{}'", plugin_id);
+    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -554,7 +664,9 @@ pub fn run() {
             start_probe_batch,
             list_plugins,
             get_log_path,
-            update_global_shortcut
+            update_global_shortcut,
+            set_profile_avatar,
+            remove_profile_avatar,
         ])
         .setup(|app| {
             #[cfg(target_os = "macos")]
@@ -660,9 +772,103 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::{
+        find_profile_dir, update_avatar_in_state,
         DAILY_ACTIVE_TRACKED_DAY_KEY, seconds_until_next_utc_day, should_track_daily_active,
     };
+    use crate::plugin_engine::{
+        manifest::{LoadedPlugin, PluginManifest},
+        profile_discovery::ProfileInstance,
+    };
+    use std::collections::HashMap;
     use time::{Date, Month, PrimitiveDateTime, Time};
+
+    fn make_manifest(id: &str) -> PluginManifest {
+        PluginManifest {
+            schema_version: 1,
+            id: id.to_string(),
+            name: id.to_string(),
+            version: "0.0.1".to_string(),
+            entry: "plugin.js".to_string(),
+            icon: "icon.svg".to_string(),
+            brand_color: None,
+            lines: vec![],
+            links: vec![],
+            profiles: None,
+        }
+    }
+
+    fn make_instance(suffix: &str, profile_dir: Option<&str>) -> ProfileInstance {
+        let mut env_overrides = HashMap::new();
+        if let Some(dir) = profile_dir {
+            env_overrides.insert("CLAUDE_CONFIG_DIR".to_string(), dir.to_string());
+        }
+        ProfileInstance {
+            id_suffix: suffix.to_string(),
+            display_label: if suffix.is_empty() { None } else { Some(suffix.to_string()) },
+            env_overrides,
+            avatar_data_url: None,
+        }
+    }
+
+    fn make_plugin(id: &str, instances: Vec<ProfileInstance>) -> LoadedPlugin {
+        LoadedPlugin {
+            manifest: make_manifest(id),
+            plugin_dir: std::path::PathBuf::from("/fake"),
+            entry_script: String::new(),
+            icon_data_url: String::new(),
+            instances,
+        }
+    }
+
+    #[test]
+    fn find_profile_dir_returns_none_for_anonymous_instance() {
+        let plugins = vec![make_plugin("claude", vec![make_instance("", None)])];
+        assert!(find_profile_dir(&plugins, "claude").is_none());
+    }
+
+    #[test]
+    fn find_profile_dir_returns_dir_for_profile_instance() {
+        let plugins = vec![make_plugin(
+            "claude",
+            vec![
+                make_instance("", None),
+                make_instance("work", Some("/profiles/work")),
+            ],
+        )];
+        let dir = find_profile_dir(&plugins, "claude:work").expect("should find dir");
+        assert_eq!(dir.to_string_lossy(), "/profiles/work");
+    }
+
+    #[test]
+    fn find_profile_dir_returns_none_for_unknown_plugin() {
+        let plugins = vec![make_plugin("claude", vec![make_instance("", None)])];
+        assert!(find_profile_dir(&plugins, "codex").is_none());
+    }
+
+    #[test]
+    fn update_avatar_in_state_sets_data_url() {
+        let mut plugins = vec![make_plugin(
+            "claude",
+            vec![
+                make_instance("", None),
+                make_instance("work", Some("/profiles/work")),
+            ],
+        )];
+        update_avatar_in_state(&mut plugins, "claude:work", Some("data:image/png;base64,abc".to_string()));
+        let inst = plugins[0].instances.iter().find(|i| i.id_suffix == "work").unwrap();
+        assert_eq!(inst.avatar_data_url.as_deref(), Some("data:image/png;base64,abc"));
+    }
+
+    #[test]
+    fn update_avatar_in_state_clears_data_url() {
+        let mut plugins = vec![make_plugin(
+            "claude",
+            vec![make_instance("work", Some("/profiles/work"))],
+        )];
+        plugins[0].instances[0].avatar_data_url = Some("old".to_string());
+        update_avatar_in_state(&mut plugins, "claude:work", None);
+        assert!(plugins[0].instances[0].avatar_data_url.is_none());
+    }
 
     #[test]
     fn should_track_when_no_previous_day() {

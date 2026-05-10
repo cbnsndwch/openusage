@@ -11,6 +11,7 @@
 //! `LoadedPlugin::instances`. Plugins without a `profiles` config get a single
 //! anonymous instance (the existing behavior).
 
+use base64::{Engine, engine::general_purpose::STANDARD};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -23,6 +24,8 @@ pub struct ProfileInstance {
     pub id_suffix: String,
     pub display_label: Option<String>,
     pub env_overrides: HashMap<String, String>,
+    /// Base64 data URL of a user-supplied avatar image (PNG or JPEG), if present.
+    pub avatar_data_url: Option<String>,
 }
 
 impl ProfileInstance {
@@ -61,6 +64,23 @@ fn claude_profiles_dir() -> Option<PathBuf> {
     }
 }
 
+/// Look for `avatar.png`, `avatar.jpg`, or `avatar.jpeg` in `profile_dir`.
+/// Returns a base64 data URL on the first match, or `None` if no file is found.
+/// Candidates are tried in order: PNG first, then JPG, then JPEG extension.
+fn load_avatar(profile_dir: &std::path::Path) -> Option<String> {
+    for (filename, mime) in [
+        ("avatar.png", "image/png"),
+        ("avatar.jpg", "image/jpeg"),
+        ("avatar.jpeg", "image/jpeg"),
+    ] {
+        let path = profile_dir.join(filename);
+        if let Ok(bytes) = std::fs::read(&path) {
+            return Some(format!("data:{};base64,{}", mime, STANDARD.encode(&bytes)));
+        }
+    }
+    None
+}
+
 fn discover_claude_profiles() -> Vec<ProfileInstance> {
     // The default instance corresponds to ~/.claude (no override). Always shown
     // so users without claudep — or with creds in both places — keep working.
@@ -88,10 +108,12 @@ fn discover_claude_profiles() -> Vec<ProfileInstance> {
                 "CLAUDE_CONFIG_DIR".to_string(),
                 path.to_string_lossy().to_string(),
             );
+            let avatar_data_url = load_avatar(&path);
             Some(ProfileInstance {
                 id_suffix: name.clone(),
                 display_label: Some(name),
                 env_overrides,
+                avatar_data_url,
             })
         })
         .collect();
@@ -133,6 +155,13 @@ pub fn full_display_name(plugin_name: &str, display_label: Option<&str>) -> Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+
+    fn make_temp_dir(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("openusage_test_{}", name));
+        fs::create_dir_all(&dir).expect("create temp dir");
+        dir
+    }
 
     #[test]
     fn full_provider_id_collapses_empty_suffix() {
@@ -161,5 +190,68 @@ mod tests {
         assert!(!instances.is_empty());
         assert!(instances[0].id_suffix.is_empty());
         assert!(instances[0].env_overrides.is_empty());
+    }
+
+    #[test]
+    fn anonymous_instance_has_no_avatar() {
+        let inst = ProfileInstance::anonymous();
+        assert!(inst.avatar_data_url.is_none());
+    }
+
+    #[test]
+    fn load_avatar_returns_none_for_empty_dir() {
+        let dir = make_temp_dir("avatar_none");
+        assert!(load_avatar(&dir).is_none());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn load_avatar_returns_png_data_url() {
+        let dir = make_temp_dir("avatar_png");
+        let bytes = b"fakepng";
+        fs::write(dir.join("avatar.png"), bytes).unwrap();
+
+        let result = load_avatar(&dir).expect("expected data url");
+        assert!(result.starts_with("data:image/png;base64,"));
+        let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
+        assert!(result.ends_with(&encoded));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn load_avatar_returns_jpg_data_url_when_no_png() {
+        let dir = make_temp_dir("avatar_jpg");
+        let bytes = b"fakejpeg";
+        fs::write(dir.join("avatar.jpg"), bytes).unwrap();
+
+        let result = load_avatar(&dir).expect("expected data url");
+        assert!(result.starts_with("data:image/jpeg;base64,"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn load_avatar_returns_jpeg_ext_when_no_png_or_jpg() {
+        let dir = make_temp_dir("avatar_jpeg");
+        let bytes = b"fakejpeg2";
+        fs::write(dir.join("avatar.jpeg"), bytes).unwrap();
+
+        let result = load_avatar(&dir).expect("expected data url");
+        assert!(result.starts_with("data:image/jpeg;base64,"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn load_avatar_prefers_png_over_jpg() {
+        let dir = make_temp_dir("avatar_prefer_png");
+        fs::write(dir.join("avatar.png"), b"png_bytes").unwrap();
+        fs::write(dir.join("avatar.jpg"), b"jpg_bytes").unwrap();
+
+        let result = load_avatar(&dir).expect("expected data url");
+        assert!(result.starts_with("data:image/png;base64,"));
+
+        let _ = fs::remove_dir_all(&dir);
     }
 }

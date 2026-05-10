@@ -45,6 +45,10 @@ export type PluginMeta = {
   links?: PluginLink[]
   /** Ordered list of primary metric candidates. Frontend picks first available. */
   primaryCandidates: string[]
+  /** Optional base64 data URL of a user-supplied avatar image for this profile. */
+  avatarUrl?: string
+  /** True when this instance has a writable profile directory (avatar picker is available). */
+  supportsAvatar: boolean
 }
 
 export type PluginDisplayState = {

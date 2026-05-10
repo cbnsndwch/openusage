@@ -6,6 +6,8 @@ export type SettingsPluginState = {
   id: string
   name: string
   enabled: boolean
+  supportsAvatar: boolean
+  avatarUrl?: string
 }
 
 type UseSettingsPluginListArgs = {
@@ -19,13 +21,15 @@ export function useSettingsPluginList({ pluginSettings, pluginsMeta }: UseSettin
     const pluginMap = new Map(pluginsMeta.map((plugin) => [plugin.id, plugin]))
 
     return pluginSettings.order
-      .map((id) => {
+      .map((id): SettingsPluginState | null => {
         const meta = pluginMap.get(id)
         if (!meta) return null
         return {
           id,
           name: meta.name,
           enabled: !pluginSettings.disabled.includes(id),
+          supportsAvatar: meta.supportsAvatar,
+          avatarUrl: meta.avatarUrl,
         }
       })
       .filter((plugin): plugin is SettingsPluginState => Boolean(plugin))

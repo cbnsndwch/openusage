@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.7.2
+
+### Features
+- feat(avatar): add profile avatar picker with set/remove commands and side nav display
+- feat(plugin-types): add `avatarUrl` and `supportsAvatar` to `PluginMeta`
+- feat(profile-discovery): load avatar image from profile directory
+
+### Chores
+- chore(deps): update Tauri, Vite 8, React, Tailwind CSS, and testing packages
+- feat: add npm-check-updates configuration for package management
+
+---
+
+**Full Changelog**: [v0.7.1...v0.7.2](https://github.com/cbnsndwch/openusage/compare/v0.7.1...v0.7.2)
+
 ## v0.7.1
 
 ### Chores

@@ -4,7 +4,7 @@ import { useAppPluginViews } from "@/hooks/app/use-app-plugin-views"
 import type { PluginMeta } from "@/lib/plugin-types"
 import type { PluginSettings } from "@/lib/settings"
 
-function createPluginMeta(id: string, name: string): PluginMeta {
+function createPluginMeta(id: string, name: string, extra?: Partial<PluginMeta>): PluginMeta {
   return {
     id,
     name,
@@ -12,6 +12,8 @@ function createPluginMeta(id: string, name: string): PluginMeta {
     brandColor: "#000000",
     lines: [],
     primaryCandidates: [],
+    supportsAvatar: false,
+    ...extra,
   }
 }
 
@@ -107,6 +109,33 @@ describe("useAppPluginViews", () => {
     await waitFor(() => {
       expect(setActiveView).toHaveBeenCalledWith("home")
     })
+  })
+
+  it("forwards avatarUrl from PluginMeta into NavPlugin", () => {
+    const avatarUrl = "data:image/png;base64,abc"
+    const { result } = renderHook(() =>
+      useAppPluginViews({
+        activeView: "home",
+        setActiveView: vi.fn(),
+        pluginSettings: { order: ["codex"], disabled: [] },
+        pluginsMeta: [createPluginMeta("codex", "Codex", { avatarUrl })],
+        pluginStates: {},
+      })
+    )
+    expect(result.current.navPlugins[0]?.avatarUrl).toBe(avatarUrl)
+  })
+
+  it("navPlugin avatarUrl is undefined when PluginMeta has none", () => {
+    const { result } = renderHook(() =>
+      useAppPluginViews({
+        activeView: "home",
+        setActiveView: vi.fn(),
+        pluginSettings: { order: ["codex"], disabled: [] },
+        pluginsMeta: [createPluginMeta("codex", "Codex")],
+        pluginStates: {},
+      })
+    )
+    expect(result.current.navPlugins[0]?.avatarUrl).toBeUndefined()
   })
 
   it("returns selected plugin for active provider view", () => {

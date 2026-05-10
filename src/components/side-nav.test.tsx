@@ -81,6 +81,63 @@ describe("SideNav", () => {
     expect(p2Style).toContain("rgb(255, 255, 255)")
   })
 
+  it("does not render avatar overlay when avatarUrl is absent", () => {
+    const { container } = render(
+      <SideNav
+        activeView="home"
+        onViewChange={vi.fn()}
+        plugins={[{ id: "p1", name: "Plugin 1", iconUrl: "icon.svg" }]}
+      />
+    )
+    expect(container.querySelector("img")).toBeNull()
+  })
+
+  it("renders avatar overlay with correct src when avatarUrl is provided", () => {
+    const avatarUrl = "data:image/png;base64,abc123"
+    const { container } = render(
+      <SideNav
+        activeView="home"
+        onViewChange={vi.fn()}
+        plugins={[{ id: "p1", name: "Plugin 1", iconUrl: "icon.svg", avatarUrl }]}
+      />
+    )
+    const img = container.querySelector("img")
+    expect(img).not.toBeNull()
+    expect(img).toHaveAttribute("src", avatarUrl)
+  })
+
+  it("avatar is the main icon and provider pip is aria-hidden", () => {
+    const { container } = render(
+      <SideNav
+        activeView="home"
+        onViewChange={vi.fn()}
+        plugins={[{ id: "p1", name: "Plugin 1", iconUrl: "icon.svg", avatarUrl: "data:image/png;base64,x" }]}
+      />
+    )
+    // The <img> is now the primary accessible element (not hidden)
+    const img = container.querySelector("img")
+    expect(img).not.toHaveAttribute("aria-hidden")
+    // The provider icon pip is the aria-hidden overlay
+    const pip = container.querySelector("[aria-hidden='true']")
+    expect(pip).not.toBeNull()
+  })
+
+  it("only shows avatar for the plugin that has one", () => {
+    const { container } = render(
+      <SideNav
+        activeView="home"
+        onViewChange={vi.fn()}
+        plugins={[
+          { id: "p1", name: "Plugin 1", iconUrl: "icon.svg" },
+          { id: "p2", name: "Plugin 2", iconUrl: "icon2.svg", avatarUrl: "data:image/png;base64,y" },
+        ]}
+      />
+    )
+    const imgs = container.querySelectorAll("img")
+    expect(imgs).toHaveLength(1)
+    expect(imgs[0]).toHaveAttribute("src", "data:image/png;base64,y")
+  })
+
   it("opens the issues page and hides the panel from Help", async () => {
     const onViewChange = vi.fn()
     render(<SideNav activeView="home" onViewChange={onViewChange} plugins={[]} />)

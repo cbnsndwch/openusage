@@ -15,7 +15,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
+import { useRef } from "react";
+import { GripVertical, ImagePlus, X } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { GlobalShortcutSection } from "@/components/global-shortcut-section";
@@ -40,6 +41,8 @@ interface PluginConfig {
   id: string;
   name: string;
   enabled: boolean;
+  supportsAvatar?: boolean;
+  avatarUrl?: string;
 }
 
 const TRAY_PREVIEW_SIZE_PX = getTrayIconSizePx(1);
@@ -196,10 +199,14 @@ function MenubarIconStylePreview({
 function SortablePluginItem({
   plugin,
   onToggle,
+  onAvatarChange,
 }: {
   plugin: PluginConfig;
   onToggle: (id: string) => void;
+  onAvatarChange?: (id: string, dataUrl: string | null) => void;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const {
     attributes,
     listeners,
@@ -212,6 +219,17 @@ function SortablePluginItem({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      onAvatarChange?.(plugin.id, reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
   return (
@@ -244,6 +262,48 @@ function SortablePluginItem({
         {plugin.name}
       </span>
 
+      {plugin.supportsAvatar && (
+        <span
+          className="flex items-center gap-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg"
+            className="sr-only"
+            tabIndex={-1}
+            onChange={handleFileChange}
+          />
+          <button
+            type="button"
+            title={plugin.avatarUrl ? "Change avatar" : "Set avatar"}
+            onClick={() => fileInputRef.current?.click()}
+            className={cn(
+              "size-6 rounded overflow-hidden flex items-center justify-center",
+              "border border-border hover:border-foreground/40 transition-colors",
+              !plugin.avatarUrl && "bg-muted"
+            )}
+          >
+            {plugin.avatarUrl ? (
+              <img src={plugin.avatarUrl} alt="" className="size-full object-cover" />
+            ) : (
+              <ImagePlus className="size-3.5 text-muted-foreground" />
+            )}
+          </button>
+          {plugin.avatarUrl && (
+            <button
+              type="button"
+              title="Remove avatar"
+              onClick={() => onAvatarChange?.(plugin.id, null)}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="size-3" />
+            </button>
+          )}
+        </span>
+      )}
+
       {/* Wrap to stop Base UI's internal input.click() from bubbling to the row div */}
       <span onClick={(e) => e.stopPropagation()}>
         <Checkbox
@@ -260,6 +320,7 @@ interface SettingsPageProps {
   plugins: PluginConfig[];
   onReorder: (orderedIds: string[]) => void;
   onToggle: (id: string) => void;
+  onAvatarChange: (pluginId: string, dataUrl: string | null) => void;
   autoUpdateInterval: AutoUpdateIntervalMinutes;
   onAutoUpdateIntervalChange: (value: AutoUpdateIntervalMinutes) => void;
   themeMode: ThemeMode;
@@ -281,6 +342,7 @@ export function SettingsPage({
   plugins,
   onReorder,
   onToggle,
+  onAvatarChange,
   autoUpdateInterval,
   onAutoUpdateIntervalChange,
   themeMode,
@@ -509,6 +571,7 @@ export function SettingsPage({
                   key={plugin.id}
                   plugin={plugin}
                   onToggle={onToggle}
+                  onAvatarChange={onAvatarChange}
                 />
               ))}
             </SortableContext>

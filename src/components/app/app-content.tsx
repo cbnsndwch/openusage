@@ -35,6 +35,7 @@ export type AppContentActionProps = {
   traySettingsPreview: TraySettingsPreview
   onGlobalShortcutChange: (value: GlobalShortcut) => void
   onStartOnLoginChange: (value: boolean) => void
+  onAvatarChange: (pluginId: string, dataUrl: string | null) => void
 }
 
 export type AppContentProps = AppContentDerivedProps & AppContentActionProps
@@ -55,6 +56,7 @@ export function AppContent({
   traySettingsPreview,
   onGlobalShortcutChange,
   onStartOnLoginChange,
+  onAvatarChange,
 }: AppContentProps) {
   const { activeView } = useAppUiStore(
     useShallow((state) => ({
@@ -100,6 +102,7 @@ export function AppContent({
         plugins={settingsPlugins}
         onReorder={onReorder}
         onToggle={onToggle}
+        onAvatarChange={onAvatarChange}
         autoUpdateInterval={autoUpdateInterval}
         onAutoUpdateIntervalChange={onAutoUpdateIntervalChange}
         themeMode={themeMode}

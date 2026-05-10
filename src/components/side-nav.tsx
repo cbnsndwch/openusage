@@ -39,6 +39,7 @@ interface NavPlugin {
   name: string
   iconUrl: string
   brandColor?: string
+  avatarUrl?: string
 }
 
 interface SideNavProps {
@@ -118,22 +119,51 @@ function SortableNavPlugin({ plugin, isActive, isDark, onClick, onContextMenu }:
         onContextMenu={onContextMenu}
         aria-label={plugin.name}
       >
-        <span
-          role="img"
-          aria-label={plugin.name}
-          className="size-6 inline-block"
-          style={{
-            backgroundColor: getIconColor(plugin.brandColor, isDark),
-            WebkitMaskImage: `url(${plugin.iconUrl})`,
-            WebkitMaskSize: "contain",
-            WebkitMaskRepeat: "no-repeat",
-            WebkitMaskPosition: "center",
-            maskImage: `url(${plugin.iconUrl})`,
-            maskSize: "contain",
-            maskRepeat: "no-repeat",
-            maskPosition: "center",
-          }}
-        />
+        <span className="relative size-6 inline-block">
+          {plugin.avatarUrl ? (
+            <img
+              role="img"
+              aria-label={plugin.name}
+              src={plugin.avatarUrl}
+              alt={plugin.name}
+              className="size-6 rounded object-cover"
+            />
+          ) : (
+            <span
+              role="img"
+              aria-label={plugin.name}
+              className="size-6 inline-block"
+              style={{
+                backgroundColor: getIconColor(plugin.brandColor, isDark),
+                WebkitMaskImage: `url(${plugin.iconUrl})`,
+                WebkitMaskSize: "contain",
+                WebkitMaskRepeat: "no-repeat",
+                WebkitMaskPosition: "center",
+                maskImage: `url(${plugin.iconUrl})`,
+                maskSize: "contain",
+                maskRepeat: "no-repeat",
+                maskPosition: "center",
+              }}
+            />
+          )}
+          {plugin.avatarUrl && (
+            <span
+              aria-hidden
+              className="absolute bottom-0 right-0 size-3 inline-block"
+              style={{
+                backgroundColor: getIconColor(plugin.brandColor, isDark),
+                WebkitMaskImage: `url(${plugin.iconUrl})`,
+                WebkitMaskSize: "contain",
+                WebkitMaskRepeat: "no-repeat",
+                WebkitMaskPosition: "center",
+                maskImage: `url(${plugin.iconUrl})`,
+                maskSize: "contain",
+                maskRepeat: "no-repeat",
+                maskPosition: "center",
+              }}
+            />
+          )}
+        </span>
       </NavButton>
     </div>
   )

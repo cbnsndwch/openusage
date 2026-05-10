@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react"
 import { useShallow } from "zustand/react/shallow"
+import { invoke } from "@tauri-apps/api/core"
 import { AppShell } from "@/components/app/app-shell"
 import { useAppPluginViews } from "@/hooks/app/use-app-plugin-views"
 import { useProbe } from "@/hooks/app/use-probe"
@@ -213,6 +214,40 @@ function App() {
     [activeView, handleRetryPlugin, scheduleTrayIconUpdate, setActiveView, setPluginSettings]
   )
 
+  const handleAvatarChange = useCallback(
+    (pluginId: string, dataUrl: string | null) => {
+      if (dataUrl) {
+        const commaIdx = dataUrl.indexOf(",")
+        const header = dataUrl.slice(0, commaIdx)
+        const mimeType = header.replace(/^data:/, "").replace(/;base64$/, "")
+        const binaryStr = atob(dataUrl.slice(commaIdx + 1))
+        const bytes = Array.from({ length: binaryStr.length }, (_, i) =>
+          binaryStr.charCodeAt(i)
+        )
+        invoke("set_profile_avatar", { pluginId, bytes, mimeType }).then(() => {
+          setPluginsMeta(
+            pluginsMeta.map((p) =>
+              p.id === pluginId ? { ...p, avatarUrl: dataUrl } : p
+            )
+          )
+        }).catch((err) => {
+          console.error("set_profile_avatar failed:", err)
+        })
+      } else {
+        invoke("remove_profile_avatar", { pluginId }).then(() => {
+          setPluginsMeta(
+            pluginsMeta.map((p) =>
+              p.id === pluginId ? { ...p, avatarUrl: undefined } : p
+            )
+          )
+        }).catch((err) => {
+          console.error("remove_profile_avatar failed:", err)
+        })
+      }
+    },
+    [pluginsMeta, setPluginsMeta]
+  )
+
   const isPluginRefreshAvailable = useCallback(
     (pluginId: string) => {
       const pluginState = pluginStates[pluginId]
@@ -248,6 +283,7 @@ function App() {
         traySettingsPreview,
         onGlobalShortcutChange: handleGlobalShortcutChange,
         onStartOnLoginChange: handleStartOnLoginChange,
+        onAvatarChange: handleAvatarChange,
       }}
     />
   )

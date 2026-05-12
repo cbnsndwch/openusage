@@ -4,7 +4,7 @@ See your usage at a glance from your menu bar. No digging through dashboards.
 
 > **Disclaimer:** PaceBar is an independent fork of [OpenUsage](https://github.com/robinebers/openusage) by Robin Ebers — not endorsed by or affiliated with the upstream project.
 
-![PaceBar Screenshot](screenshot.png)
+<!-- ![PaceBar Screenshot](screenshot.png) -->
 
 ## Download
 
